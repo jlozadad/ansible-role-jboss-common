@@ -12,37 +12,32 @@
         username: "{{ rhn_username }}"
         password: "{{ rhn_password }}"
         autosubscribe: true
-
-    - name: Attach to pool
-      command: subscription-manager attach --pool="{{ rh_poolid }}"
-      ignore_errors: yes
+        poolids: "{{ rh_poolid }}"
+  
   when: rhsm_subscribe_host|bool
 
 - name: Disable All RHEL Repositories
-  command: "subscription-manager repos --disable=*"
+  rhsm_repository:
+    name: "*"
+    state: disabled
   tags:
     - common
   when: rhsm_disable_existing_repositories|bool
 
 - name: Enable RHEL Repositories
-  command: "subscription-manager repos --enable {{ item }}"
-  with_items: "{{ rhsm_repositories }}"
+  rhsm_repository:
+    name: "{{ rhsm_repositories }}"
+    state: enabled
   tags:
     - common
   when: transfer_method == 'csp-to-host' and rhsm_enable_required_repositories|bool
 
 - name: EPEL Configuration
   block:
-    - name: Download EPEL for RHEL
-      get_url:
-        url: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
-        dest: "/tmp"
-      tags:
-        - common
-
-    - name: Install EPEL for RHEL
-      action: "{{ ansible_pkg_mgr }} name=/tmp/epel-release-latest-7.noarch.rpm state=present"
-      changed_when: False
+    - name: Install EPEL for RHEiL
+      yum:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
+        state: installed
       tags:
         - common
   when: transfer_method == 'csp-to-host' and install_pip_dependencies|bool
