@@ -1,27 +1,27 @@
 ---
 
 - name: Tasks on a RHEL host
-  include: main-rhel.yml
+  include_tasks: main-rhel.yml
   when: ansible_distribution == 'RedHat'
 
 - name: Tasks on a CentOS host
-  include: main-centos.yml
+  include_tasks: main-centos.yml
   when: ansible_distribution == 'CentOS'
 
 - name: Install Java
-  action: "{{ ansible_pkg_mgr }} name={{ jboss_java_pkg_name }} state=latest"
-  when: install_java|bool
-  tags:
-  - common
-
-- name: Install Unzip
-  action: "{{ ansible_pkg_mgr }} name=unzip state=latest"
+  package:
+    name: 
+      - java
+      - unzip
+  when: install_requirements
   tags:
   - common
 
 # initscripts are for : v6.x or older
 - name: Install initscripts
-  action: "{{ ansible_pkg_mgr }} name=initscripts state=latest"
+  package:
+    name: initscripts
+    state: installed
   tags:
     - common
   when: ansible_distribution_major_version is version_compare('7', '<')
@@ -29,13 +29,15 @@
 - name: Install PIP dependencies and Remove EPEL
   block:
     - name: Install PIP
-      action: "{{ ansible_pkg_mgr }} name=python-pip state=latest"
+      package:
+        name: python-pip
+        state: installed
       tags:
         - common
 
     - name: Install Python Dependencies
       pip:
-        name: "{{item}}"
+        name: "{{ item }}"
         state: present
       with_items:
         - requests
@@ -44,8 +46,9 @@
         - common
 
     - name: Remove EPEL Package
-      action: "{{ ansible_pkg_mgr }} name='epel*' state=absent"
-      changed_when: False
+      package:
+        name: "epel*"
+        state: absent
       tags:
         - common
   when: transfer_method == 'csp-to-host' and install_pip_dependencies|bool
